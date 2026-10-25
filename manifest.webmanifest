@@ -1,0 +1,19 @@
+{
+  "name": "NovaReel Studio — YouTube Creative Agent",
+  "short_name": "NovaReel",
+  "description": "Free private YouTube story and storyboard maker",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#090e22",
+  "theme_color": "#0d1330",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

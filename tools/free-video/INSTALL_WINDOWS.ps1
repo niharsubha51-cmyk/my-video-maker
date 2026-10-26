@@ -23,8 +23,10 @@ $py=Get-Command py.exe -ErrorAction SilentlyContinue
 $python=Get-Command python.exe -ErrorAction SilentlyContinue
 $mode=""
 if($py){
-  & $py.Source -3.13 --version 2>$null | Out-Null
-  if($LASTEXITCODE -eq 0){$mode="py"}
+  try {
+    & $py.Source -3.13 --version 2>$null | Out-Null
+    if($LASTEXITCODE -eq 0){$mode="py"}
+  } catch { Write-Warning "Python launcher is present, but Python 3.13 is unavailable." }
 }
 if((-not $mode) -and $python){
   $ver=& $python.Source --version 2>&1
@@ -34,14 +36,15 @@ if(-not $mode){Write-Warning "Install Python 3.13 from python.org and open a NEW
 $root=[System.IO.Path]::GetFullPath($InstallRoot)
 Write-Host "Target folder: $root"
 try{
- $disk=New-Object System.IO.DriveInfo([System.IO.Path]::GetPathRoot($root))
+ $disk=[System.IO.DriveInfo]::new([System.IO.Path]::GetPathRoot($root))
  $free=[Math]::Round($disk.AvailableFreeSpace/1GB,1)
  Write-Host "Free space: $free GB"
  if($free -lt 35){Write-Warning "At least 35 GB free storage is recommended for app + model."}
 }catch{Write-Warning "Disk space check unavailable."}
 if($CheckOnly){Write-Host "Check-only completed. No files changed." -ForegroundColor Yellow; exit 0}
 if(-not $git -or -not $mode){throw "Git and Python are required. Fix the checks first."}
-if($vram -lt 6000){throw "Supported NVIDIA GPU with at least 6GB VRAM not confirmed. Installation stopped."}
+if($vram -lt 6000){throw "NVIDIA GPU with at least 6GB VRAM not confirmed. Installation stopped."}
+if($lines -match "GTX\s*10\d\d|GTX\s*9\d\d") {throw "Detected an older GTX GPU; CUDA 13.0 wheels may not support it. Use the official compatible ComfyUI portable release instead."}
 Write-Host "ComfyUI source and dependencies are free. Downloads include several GB of PyTorch packages."
 Write-Host "Video model weights are NOT included. You will select them separately."
 $confirm=Read-Host "Type INSTALL to approve free software download and local changes"

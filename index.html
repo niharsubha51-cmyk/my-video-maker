@@ -115,7 +115,22 @@ function threeActHook(premise,genre,lead){
  return lead+" spotted a mysterious clue. What could it mean?";
 }
 function threeActCaption(text){
- return String(text||"").replace(/\s+/g," ").trim().slice(0,100);
+ var s=String(text||"").replace(/\s+/g," ").trim();
+ if(s.length<=100)return s;
+ var partial=s.slice(0,100),end=partial.lastIndexOf(" ");
+ return partial.slice(0,end>65?end:100).replace(/[\s,;:—-]+$/,"")+"…";
+}
+function threeActFinalCaption(premise,genre){
+ var t=premise.toLowerCase();
+ if(/\bfish\b|\bturtle\b|\bocean\b|\bunderwater\b/.test(t))return "The fish returns home, and rainbow bubbles fill the reef!";
+ if(/\bcake\b|\bcupcake\b|\bcandy\b|\bcookie\b/.test(t))return "They find the treat and celebrate together!";
+ if(/\bballoon\b/.test(t))return "The balloon comes home safely. Everyone cheers!";
+ if(/\blocket\b|\bnecklace\b|\bpendant\b/.test(t))return "The keepsake's true owner is revealed. The mystery is solved!";
+ if(/\brainbow\b|\bpaint\b|\bcolor\b/.test(t))return "The last color completes a beautiful rainbow!";
+ if(genre==="drama")return "The real truth is revealed, and the family finally understands.";
+ if(genre==="satisfying")return "The final piece fits! A perfect design is revealed.";
+ if(genre==="animals")return "The lost prize is found. The friends celebrate!";
+ return "The mystery is solved, and everyone shares the happy ending!";
 }
 function threeActPayoff(premise,genre){
  var t=premise.toLowerCase();
@@ -172,8 +187,8 @@ function generate(){
  state.script=state.scenes.map((sc,i)=>sc.heading+"\n"+sc.narration).join("\n\n");
  var subject=titleFor(state.idea,state.genre);
  state.metadata={title:subject,description:"Join us for an original "+(state.genre==="kids"?"family-friendly animated adventure":state.genre==="satisfying"?"relaxing and colorful creative journey":state.genre==="drama"?"dramatic story with unexpected turns":"funny animal story")+"!\n\n"+state.idea+"\n\nThis story includes a suspenseful opening, a developing adventure, and a satisfying ending.\n\nCreated from original story ideas. Subscribe for more adventures!\n\n#Shorts #YouTube"+(state.format==="short"?" #CartoonShorts":" #Animation"),hashtags:["#Shorts","#YouTube",...p.tags.map(x=>"#"+x)].join(" ")};
- state.shorts=Object.assign({},state.shorts||{},{lastIdea:state.idea,hook:suspense,cta:"Mystery solved! A happy ending for everyone. 🌈",
- captions:state.scenes.map(function(sc,i){return i===0?threeActCaption(suspense):i===state.scenes.length-1?threeActCaption("The mystery is solved! "+payoff):threeActCaption(sc.narration)})});
+ state.shorts=Object.assign({},state.shorts||{},{lastIdea:state.idea,hook:suspense,cta:threeActFinalCaption(premise,state.genre),
+ captions:state.scenes.map(function(sc,i){return i===0?threeActCaption(suspense):i===state.scenes.length-1?threeActFinalCaption(premise,state.genre):threeActCaption(sc.narration)})});
  state.id=null;state.createdAt=null;previewIndex=0;renderAll();toast("3-part story created: suspense hook → story → reward & payoff!");
 }
 function updateStats(){$("statScenes").textContent=state.scenes.length+" scenes";$("statDuration").textContent=(Math.round(state.scenes.reduce((sum,s)=>sum+Math.max(.5,Number(s.durationSec)||3),0)*10)/10)+" sec";$("statProjects").textContent=saved.length+" saved";}

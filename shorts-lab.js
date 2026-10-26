@@ -3,7 +3,7 @@
 "use strict";
 var api=window.NovaReelAPI,root=document.getElementById("shortsLabRoot");
 if(!api||!root)return;
-var images=new Map(),audioFile=null,audioRun=null;
+var images=new Map(),audioFile=null,audioRun=null,isExporting=false,activeVideoIndex=-1;
 function $id(id){return document.getElementById(id)}
 function esc(v){return String(v===undefined||v===null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
 function sel(v,k){return v===k?" selected":""}
@@ -14,7 +14,7 @@ function config(){
  var s=state(),def={target:30,hook:"",captions:[],font:"bold",position:"lower",sticker:"✨",transition:"fade",filter:"vivid",cta:"The adventure continues! 🌟",series:"HappyNova Kids",episode:"1",showCaptions:true,showHook:true,showCTA:true,madeForKids:true,audioVolume:.25,audioRights:false,lastIdea:""};
  if(!s.shorts||typeof s.shorts!=="object")s.shorts={};
  Object.keys(def).forEach(function(k){if(s.shorts[k]===undefined)s.shorts[k]=def[k]});
- if(s.shorts.lastIdea!==s.idea){s.shorts.captions=[];s.shorts.hook="";s.shorts.lastIdea=s.idea}
+ if(s.shorts.lastIdea!==s.idea){images.forEach(function(v){URL.revokeObjectURL(v.url);if(v.video)v.video.pause()});images.clear();s.shorts.captions=[];s.shorts.hook="";s.shorts.lastIdea=s.idea}
  return s.shorts
 }
 function total(){return shots().reduce(function(n,sc){return n+Math.max(.5,Number(sc.durationSec)||3)},0)}
@@ -55,7 +55,7 @@ function draw(){
  [15,30,60,180].forEach(function(n){h.push('<button class="sl-btn" data-duration="'+n+'" aria-pressed="'+(Math.abs(t-n)<.2)+'">'+n+' sec</button>')});
  h.push('</div><div class="sl-timeline">');arr.forEach(function(sc,i){h.push('<div class="sl-segment" style="flex:'+Math.max(.5,Number(sc.durationSec)||3)+'" title="Scene '+(i+1)+'">'+(i+1)+'</div>')});h.push('</div><span class="sl-badge">'+t.toFixed(1)+' sec</span>');
  arr.forEach(function(sc,i){
- h.push('<article class="sl-card"><div class="sl-card-top"><span class="sl-id">SCENE '+(i+1)+'</span><strong>'+esc(sc.heading)+'</strong></div><div class="sl-grid"><div class="sl-field"><label>Duration (sec)</label><input data-seconds="'+i+'" type="number" min=".5" max="60" step=".5" value="'+Math.max(.5,Number(sc.durationSec)||3).toFixed(2)+'"></div><div class="sl-field"><label>Use own picture</label><input data-picture="'+i+'" type="file" accept="image/jpeg,image/png,image/webp"><small class="sl-audio-info">'+(images.has(i)?"Photo loaded":"Optional, local-only; not saved")+'</small></div></div><div class="sl-field"><label>Timed caption</label><textarea data-caption="'+i+'">'+esc(cap(i))+'</textarea></div></article>');
+ h.push('<article class="sl-card"><div class="sl-card-top"><span class="sl-id">SCENE '+(i+1)+'</span><strong>'+esc(sc.heading)+'</strong></div><div class="sl-grid"><div class="sl-field"><label>Duration (sec)</label><input data-seconds="'+i+'" type="number" min=".5" max="60" step=".5" value="'+Math.max(.5,Number(sc.durationSec)||3).toFixed(2)+'"></div><div class="sl-field"><label>Own photo / video clip</label><input data-picture="'+i+'" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"><small class="sl-audio-info">'+(images.has(i)?"Media loaded":"Optional media; not saved")+'</small></div></div><div class="sl-field"><label>Timed caption</label><textarea data-caption="'+i+'">'+esc(cap(i))+'</textarea></div></article>');
  });
  h.push('</section><section class="sl-pane" style="margin-top:18px"><h2>💬 Captions, stickers & effects</h2><p class="sl-help">Scene captions are editable text suggestions; they are not automatic speech transcription.</p>');
  h.push(textField("hook","Opening hook",o.hook,'maxlength="130" placeholder="Bunny discovers WHAT?!"'));
@@ -125,9 +125,15 @@ root.addEventListener("change",function(e){
  var el=e.target;
  if(el.dataset.picture!==undefined){
   var i=Number(el.dataset.picture),file=el.files&&el.files[0];if(!file)return;
-  if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>8*1024*1024){api.toast("Choose JPG, PNG or WebP under 8 MB");return}
-  var url=URL.createObjectURL(file),img=new Image();
-  img.onload=function(){var old=images.get(i);if(old)URL.revokeObjectURL(old.url);images.set(i,{url:url,img:img});draw();api.refresh();api.toast("Photo added to scene")};
+  if(!["image/png","image/jpeg","image/webp","video/mp4","video/webm"].includes(file.type)||file.size>100*1024*1024){api.toast("Choose JPG, PNG, WebP, MP4 or WebM under 100 MB");return}
+  var url=URL.createObjectURL(file);
+  function finish(obj){var old=images.get(i);if(old){if(old.video)old.video.pause();URL.revokeObjectURL(old.url)}images.set(i,obj);draw();api.refresh();api.toast("Local scene media imported")}
+  if(file.type.startsWith("video/")){
+   var vid=document.createElement("video");vid.muted=true;vid.loop=true;vid.playsInline=true;vid.preload="auto";
+   vid.onloadeddata=function(){finish({url:url,video:vid})};
+   vid.onerror=function(){URL.revokeObjectURL(url);api.toast("Unsupported video codec")};vid.src=url;vid.load();return
+  }
+  var img=new Image();img.onload=function(){finish({url:url,img:img})};
   img.onerror=function(){URL.revokeObjectURL(url);api.toast("Could not read image")};img.src=url;return
  }
  if(el.id==="slAudio"){var file=el.files&&el.files[0];if(file&&file.type.startsWith("audio/")&&file.size<40*1024*1024){audioFile=file;config().audioRights=false;draw();api.toast("Confirm audio rights to include this track")}else api.toast("Select audio under 40 MB");return}
@@ -136,10 +142,17 @@ root.addEventListener("change",function(e){
 function lines(ctx,t,w,limit){var words=String(t).split(/\s+/),a=[],l="";words.forEach(function(v){var q=l?l+" "+v:v;if(ctx.measureText(q).width>w&&l){a.push(l);l=v}else l=q});if(l)a.push(l);return a.slice(0,limit)}
 function overlay(ctx,i,phase,w,h){
  var o=config(),photo=images.get(i);ctx.save();
- if(photo&&photo.img.complete&&photo.img.naturalWidth){
-  var p=photo.img,scale=Math.max(w/p.naturalWidth,h/p.naturalHeight),sw=w/scale,sh=h/scale;
+ if(isExporting&&activeVideoIndex!==i){
+  if(activeVideoIndex>=0){var previous=images.get(activeVideoIndex);if(previous&&previous.video){previous.video.pause();previous.video.currentTime=0}}
+  activeVideoIndex=i;
+  if(photo&&photo.video){photo.video.currentTime=0;photo.video.play().catch(function(){})}
+ }
+ var p=photo?(photo.video||photo.img):null;
+ if(p&&(photo.img?(p.complete&&p.naturalWidth):(p.readyState>=2))){
+  var mediaWidth=photo.img?p.naturalWidth:p.videoWidth,mediaHeight=photo.img?p.naturalHeight:p.videoHeight;
+  var scale=Math.max(w/mediaWidth,h/mediaHeight),sw=w/scale,sh=h/scale;
   ctx.save();ctx.filter=o.filter==="vivid"?"saturate(1.45) contrast(1.06)":o.filter==="warm"?"sepia(.22) saturate(1.2)":o.filter==="cool"?"hue-rotate(17deg) saturate(1.2)":"none";
-  ctx.drawImage(p,(p.naturalWidth-sw)/2,(p.naturalHeight-sh)/2,sw,sh,0,0,w,h);ctx.restore();
+  ctx.drawImage(p,(mediaWidth-sw)/2,(mediaHeight-sh)/2,sw,sh,0,0,w,h);ctx.restore();
   var g=ctx.createLinearGradient(0,0,0,h);g.addColorStop(0,"#050a2277");g.addColorStop(.5,"#050a2207");g.addColorStop(1,"#050a22b9");ctx.fillStyle=g;ctx.fillRect(0,0,w,h)
  }
  if(o.sticker!=="none"){ctx.textAlign="center";ctx.font=Math.floor(w*.09)+"px system-ui";ctx.fillText(o.sticker,w*.79,h*.31+Math.sin(phase*5)*9)}
@@ -172,6 +185,8 @@ async function attachAudio(stream){
 window.NovaReelShortsOverlay=overlay;
 window.NovaReelAudioAttach=attachAudio;
 window.NovaReelAudioBegin=function(){if(audioRun&&!audioRun.started){audioRun.started=true;audioRun.src.start(0)}};
+window.NovaReelRenderStart=function(){isExporting=true;activeVideoIndex=-1};
+window.NovaReelRenderStop=function(){isExporting=false;activeVideoIndex=-1;images.forEach(function(v){if(v.video){v.video.pause();v.video.currentTime=0}})};
 window.NovaReelLabSync=function(){if(!root.contains(document.activeElement))draw()};
 draw();
 })();

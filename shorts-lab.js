@@ -18,24 +18,79 @@ function config(){
  return s.shorts
 }
 function total(){return shots().reduce(function(n,sc){return n+Math.max(.5,Number(sc.durationSec)||3)},0)}
-function cap(i){var o=config(),sc=shots()[i]||{};if(o.captions[i]!==undefined)return o.captions[i];return i===0?(o.hook||"Wait for the surprise! 😲"):(sc.heading||"Next scene")+"! "+String(sc.action||"").split(".")[0].slice(0,50)}
-function duration(t){var s=state(),arr=shots(),o=config(),goal=Math.min(180,Math.max(3,Number(t)||30)),each=Math.round(goal/arr.length*100)/100;if(!arr.length)return;arr.forEach(function(sc,i){sc.durationSec=i===arr.length-1?+(goal-each*(arr.length-1)).toFixed(2):each});o.target=goal;s.format="short";$id("format").value="short";api.refresh()}
-function hook(){var s=state(),o=config(),bank=s.genre==="drama"?["Nobody expected THIS to happen… 😱","One clue changes everything!","The secret was right in front of them!"]:s.genre==="animals"?["What did this puppy just do?! 😂","The funniest chase starts NOW!","You won't expect that ending!"]:s.genre==="satisfying"?["Wait for the perfect reveal… 🌈","Watch until the last color!","One tiny detail changes everything!"]:["Bunny discovered something MAGICAL! ✨","Can our little friends solve this? 🐰","Wait for this incredible surprise!"];o.hook=bank[Math.floor(Math.random()*bank.length)]}
+function actAt(i){var sc=shots()[i]||{};return sc.act|| (i===0?"hook":i===shots().length-1?"payoff":"story")}
+function shortCaption(text,limit){var s=String(text||"").replace(/\s+/g," ").trim();if(s.length<=limit)return s;var part=s.slice(0,limit),end=part.lastIndexOf(" ");return part.slice(0,end>limit*.6?end:limit).replace(/[ ,;:-]+$/,"")+"."}
+function payoffFor(){
+ var s=state(),t=String(s.idea||"").toLowerCase(),end=shots()[shots().length-1]||{};
+ if(/\bfish\b|\bturtle\b|\bocean\b|\bunderwater\b/.test(t))return "The sea creature rejoins its family, and rainbow bubbles light up the reef.";
+ if(/\bcake\b|\bcupcake\b|\bcandy\b|\bcookie\b/.test(t))return "The missing treat is found, and everyone shares a joyful celebration.";
+ if(/\bballoon\b/.test(t))return "The lost balloon is returned, and the friends cheer together.";
+ if(/\blocket\b|\bnecklace\b|\bpendant\b/.test(t))return "The keepsake's true owner is revealed, and the misunderstanding is resolved.";
+ if(/\brainbow\b|\bpaint\b|\bcolor\b/.test(t))return "Every missing color clicks into place, revealing a perfect rainbow.";
+ if(s.genre==="drama")return "The hidden truth is finally revealed, and the misunderstanding is resolved.";
+ if(s.genre==="satisfying")return "The final piece fits perfectly, completing the beautiful design.";
+ if(s.genre==="animals")return "The lost prize is recovered, and the chase ends with a funny celebration.";
+ return end.action&&/REWARD AND PAYOFF/i.test(end.action)?shortCaption(end.action.replace(/^REWARD AND PAYOFF:\s*/,""),130):"The mystery is solved and the friends celebrate a happy ending.";
+}
+function cap(i){var o=config(),sc=shots()[i]||{};if(o.captions[i]!==undefined)return o.captions[i];if(actAt(i)==="hook")return o.hook||sc.narration||"A mysterious clue appears. What could it mean?";if(actAt(i)==="payoff")return shortCaption(payoffFor(),115);return shortCaption(sc.narration||sc.heading||"The story continues.",110)}
+
+function actLengths(){var t=total(),ss=shots(),hook=ss[0]?Math.max(.5,Number(ss[0].durationSec)||3):0,pay=ss.length?Math.max(.5,Number(ss[ss.length-1].durationSec)||3):0;return {hook:hook,story:Math.max(0,t-hook-pay),payoff:pay,total:t}}
+function duration(t){
+ var s=state(),arr=shots(),o=config(),goal=Math.min(180,Math.max(15,Number(t)||30));
+ if(arr.length<3){api.toast("Generate a story with at least three scenes");return}
+ var hookLen=Math.min(5,Math.max(2,Math.round(goal*.1))),payLen=Math.max(4,Math.round(goal*.27));
+ var middleTotal=goal-hookLen-payLen,middleCount=arr.length-2;
+ var each=+(middleTotal/middleCount).toFixed(2);
+ arr.forEach(function(sc,i){
+  sc.durationSec=i===0?hookLen:i===arr.length-1?payLen:i===arr.length-2?+(middleTotal-each*(middleCount-1)).toFixed(2):each;
+ });
+ o.target=goal;s.format="short";$id("format").value="short";api.refresh()
+}
+function hook(){
+ var s=state(),o=config(),first=shots()[0]||{},name=String(s.characters||"our hero").split(",")[0].trim();
+ var t=String(s.idea||"").toLowerCase(),bank;
+ if(/\bfish\b|\bturtle\b|\bocean\b/.test(t))bank=["A glowing sea creature called "+name+". But why?","A mysterious voice came from the ocean. Who was calling?","The ocean lit up with a secret. What was hidden below?"];
+ else if(/\bcake\b|\bcupcake\b|\bcandy\b/.test(t))bank=["The special treat disappeared. Who took it?","Someone stole the surprise cake! Could the friends find it?","The last cupcake vanished. Where could it be?"];
+ else if(/\bballoon\b/.test(t))bank=["The magical balloon suddenly vanished. Where did it go?","A glowing balloon floated away. Could anyone catch it?"];
+ else if(s.genre==="drama")bank=["One tiny clue exposed a shocking secret. Whose was it?","Everyone heard an accusation. But was it true?"];
+ else if(s.genre==="animals")bank=["A strange noise started the chase. What was hiding?","The animals spotted something impossible. What was it?"];
+ else if(s.genre==="satisfying")bank=["A tiny piece was missing. What would complete the design?","Something unexpected happened to the colors. What comes next?"];
+ else bank=[first.narration||"A mysterious clue appeared. What did it mean?","A magical surprise appeared. Could the friends solve its mystery?"];
+ var next=bank[Math.floor(Math.random()*bank.length)];
+ o.hook=next;o.captions[0]=next;
+ if(first.act==="hook"||shots().length>0){first.act="hook";first.heading="1 • Suspense Hook";first.narration=next}
+ syncThreeActScript();
+}
+function syncThreeActScript(){
+ var s=state();s.script=shots().map(function(sc){return sc.heading+"\n"+sc.narration}).join("\n\n")
+}
 function improve(){
- var s=state(),o=config(),arr=shots();if(!arr.length){api.toast("Generate a story first");return}
- hook();o.captions=arr.map(function(sc,i){return i===0?o.hook:sc.heading+"! "+String(sc.action||"").split(".")[0].slice(0,46)});
+ var s=state(),o=config(),arr=shots();if(arr.length<3){api.toast("Generate a story first");return}
+ for(var i=0;i<arr.length;i++){
+  var sc=arr[i];sc.act=i===0?"hook":i===arr.length-1?"payoff":"story";
+  sc.heading=i===0?"1 • Suspense Hook":i===arr.length-1?"3 • Reward & Payoff":"2 • Story — "+(String(sc.heading||"").replace(/^2 • Story — /,"")||"Build-up");
+ }
+ hook();
+ var last=arr[arr.length-1],reward=payoffFor();
+ last.narration="The mystery is solved! "+reward;
+ last.action="REWARD AND PAYOFF: "+reward+" Show the reveal clearly and give viewers a complete satisfying ending. Do not withhold the answer.";
+ o.captions=arr.map(function(sc,i){return i===0?o.hook:i===arr.length-1?shortCaption(reward,110):shortCaption(sc.narration,105)});
+ o.cta=shortCaption(reward,55);
  duration(o.target);
+ syncThreeActScript();
  var title=s.metadata.title||s.idea;
- if(!title.startsWith(o.series+" | "))s.metadata.title=(o.series+" | "+title).slice(0,98);
- if(s.genre==="drama"&&o.episode)s.metadata.title=(s.metadata.title+" | EP "+o.episode).slice(0,98);
+ if(o.series&& !title.startsWith(o.series+" | "))s.metadata.title=(o.series+" | "+title).slice(0,98);
+ if(s.genre==="drama"&&o.episode&& !s.metadata.title.includes(" | EP "))s.metadata.title=(s.metadata.title+" | EP "+o.episode).slice(0,98);
  s.metadata.hashtags=Array.from(new Set(((s.metadata.hashtags||"")+" #Shorts #Animation #YouTubeShorts").split(/\s+/).filter(Boolean))).slice(0,12).join(" ");
  o.madeForKids=s.genre==="kids";
- api.renderAll();api.toast("Local agent suggestions added — review before upload")
+ api.renderAll();api.toast("3-part Shorts agent applied: suspense → story → reward and payoff!")
 }
 function score(){
  var s=state(),o=config(),a=[],b=[],t=total();
  if(s.format==="short"&&t<=180)a.push("Shorts format and duration are within 180 seconds");else b.push("Use 9:16 Shorts format and a duration of 180 seconds or less");
- if(o.hook.trim().length>=8)a.push("Opening hook ready");else b.push("Add a first-second hook");
+ if(o.hook.trim().length>=8&&/[?.!]$/.test(o.hook.trim()))a.push("Complete suspense hook ready");else b.push("Add a complete suspenseful hook with a clear question or mystery");
+ if(shots().length>=3&&shots()[0].act==="hook"&&shots().slice(1,-1).every(function(sc){return sc.act==="story"})&&shots()[shots().length-1].act==="payoff")a.push("Three-act order: hook, story, payoff");else b.push("Apply the three-part agent to structure your scenes");
+ if(shots().length&&shots()[shots().length-1].narration&&shots()[shots().length-1].narration.length>35)a.push("Ending provides a real resolution");else b.push("Show the answer clearly at the end");
  if(o.showCaptions&&shots().every(function(_,i){return cap(i).trim().length>3}))a.push("Scene captions planned");else b.push("Add captions to each beat");
  if(s.metadata.title&&s.metadata.title.length<=100)a.push("Title is within 100 characters");else b.push("Review title length (maximum 100)");
  if(s.genre==="kids"&&!o.madeForKids)b.push("Review Made for Kids setting");else a.push("Audience setting reviewed");
@@ -48,12 +103,14 @@ function options(key,label,list,value){return '<div class="sl-field"><label>'+es
 function choice(key,label,val){return '<label class="sl-check"><input type="checkbox" data-check="'+key+'"'+ck(val)+'>'+esc(label)+'</label>'}
 function draw(){
  var s=state(),o=config(),arr=shots(),t=total(),q=score(),h=[];
- h.push('<div class="sl-header"><div><div class="eyebrow">Free Shorts creation tools</div><h1>📱 Shorts Lab</h1><p class="sl-help">Scene timing, text overlays, captions, stickers, color looks, optional audio and upload preparation.</p></div><span class="sl-badge">Up to 3 min</span></div>');
- h.push('<div class="sl-layout"><div><section class="sl-pane"><h2>⚡ Local Creator Agents</h2><p class="sl-help">Rule-based editing helpers — not a paid generative AI or competitor-video scraper.</p><div class="sl-btns"><button class="sl-btn sl-primary" data-action="optimize">✦ Optimize Short</button><button class="sl-btn" data-action="hook">↻ Suggest new hook</button><button class="sl-btn" data-action="script">Open voiceover script</button></div>');
+ h.push('<div class="sl-header"><div><div class="eyebrow">Free Shorts creation tools</div><h1>📱 Shorts Lab</h1><p class="sl-help">Auto storytelling: 1. Suspense Hook → 2. Story → 3. Reward & Payoff. Plus captions, stickers, timing and export.</p></div><span class="sl-badge">Up to 3 min</span></div>');
+ h.push('<div class="sl-layout"><div><section class="sl-pane"><h2>⚡ Local Creator Agents</h2><p class="sl-help">Rule-based editing helpers — not a paid generative AI or competitor-video scraper.</p><div class="sl-btns"><button class="sl-btn sl-primary" data-action="threepart">✦ Build 3-Part Short</button><button class="sl-btn" data-action="optimize">Optimize Short</button><button class="sl-btn" data-action="hook">↻ Suggest new hook</button><button class="sl-btn" data-action="script">Open voiceover script</button></div>');
  h.push('<h3>Story templates</h3><div class="sl-btns"><button class="sl-btn" data-template="magic">🐰 Magical rescue</button><button class="sl-btn" data-template="chase">🐶 Funny chase</button><button class="sl-btn" data-template="drama">🎭 Micro drama</button><button class="sl-btn" data-template="satisfy">🌈 Satisfying reveal</button></div><hr class="sl-divider">');
+ var timing=actLengths(),startStory=timing.hook,endStory=timing.hook+timing.story;
+ h.push('<h3>🎬 Three-act storytelling structure</h3><div class="sl-grid sl-three-act"><div class="sl-card"><span class="sl-id">1. SUSPENSE HOOK</span><strong>0–'+startStory.toFixed(1)+' sec</strong><small>Show a mystery, ask a complete question. Do not reveal the answer.</small></div><div class="sl-card"><span class="sl-id">2. THE STORY</span><strong>'+startStory.toFixed(1)+'–'+endStory.toFixed(1)+' sec</strong><small>Build interest with a clue, obstacles and a clever attempt.</small></div><div class="sl-card"><span class="sl-id">3. REWARD &amp; PAYOFF</span><strong>'+endStory.toFixed(1)+'–'+timing.total.toFixed(1)+' sec</strong><small>Show the solution and finish with a satisfying reaction.</small></div></div>');
  h.push('<h3>⏱ Clip timeline</h3><div class="sl-btns">');
  [15,30,60,180].forEach(function(n){h.push('<button class="sl-btn" data-duration="'+n+'" aria-pressed="'+(Math.abs(t-n)<.2)+'">'+n+' sec</button>')});
- h.push('</div><div class="sl-timeline">');arr.forEach(function(sc,i){h.push('<div class="sl-segment" style="flex:'+Math.max(.5,Number(sc.durationSec)||3)+'" title="Scene '+(i+1)+'">'+(i+1)+'</div>')});h.push('</div><span class="sl-badge">'+t.toFixed(1)+' sec</span>');
+ h.push('</div><div class="sl-timeline">');arr.forEach(function(sc,i){h.push('<div class="sl-segment sl-'+actAt(i)+'" style="flex:'+Math.max(.5,Number(sc.durationSec)||3)+'" title="'+actAt(i)+' — scene '+(i+1)+'">'+(i+1)+'</div>')});h.push('</div><span class="sl-badge">'+t.toFixed(1)+' sec</span>');
  arr.forEach(function(sc,i){
  h.push('<article class="sl-card"><div class="sl-card-top"><span class="sl-id">SCENE '+(i+1)+'</span><strong>'+esc(sc.heading)+'</strong></div><div class="sl-grid"><div class="sl-field"><label>Duration (sec)</label><input data-seconds="'+i+'" type="number" min=".5" max="60" step=".5" value="'+Math.max(.5,Number(sc.durationSec)||3).toFixed(2)+'"></div><div class="sl-field"><label>Own photo / video clip</label><input data-picture="'+i+'" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm"><small class="sl-audio-info">'+(images.has(i)?"Media loaded":"Optional media; not saved")+'</small></div></div><div class="sl-field"><label>Timed caption</label><textarea data-caption="'+i+'">'+esc(cap(i))+'</textarea></div></article>');
  });
@@ -99,8 +156,8 @@ root.addEventListener("click",function(e){
  var o=config(),s=state(),a=button.dataset.action;
  if(button.dataset.template){var v=templates[button.dataset.template];$id("idea").value=v[0];$id("genre").value=v[1];$id("characters").value=v[2];$id("format").value="short";$id("generate").click();draw();api.toast("Original story template loaded");return}
  if(button.dataset.duration){duration(button.dataset.duration);draw();return}
- if(a==="optimize"){improve();draw();return}
- if(a==="hook"){hook();draw();api.refresh();return}
+ if(a==="optimize"||a==="threepart"){improve();draw();return}
+ if(a==="hook"){hook();api.renderAll();draw();return}
  if(a==="script"||a==="seo"){document.querySelector('[data-view="studio"]').click();document.querySelector('[data-tab="'+(a==="script"?"script":"youtube")+'"]').click();return}
  if(a==="studio"){window.open("https://studio.youtube.com/","_blank","noopener,noreferrer");return}
  if(a==="check"){draw();api.toast("Checked locally");return}

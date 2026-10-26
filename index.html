@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#0d1330">
 <meta name="description" content="Free offline-first YouTube creative studio: scenes, prompts, scripts, thumbnails and animated storyboard video exports.">
 <link rel="manifest" href="./manifest.webmanifest">
+<link rel="stylesheet" href="./shorts-lab.css">
 <link rel="icon" type="image/svg+xml" href="./icon.svg">
 <title>NovaReel Studio — Your YouTube Story Lab</title>
 <style>
@@ -20,6 +21,7 @@
  <div class="nav-label">Workspace</div>
  <nav class="nav" aria-label="Main navigation">
   <button class="navbtn active" data-view="studio">✦ &nbsp; Creator Studio</button>
+  <button class="navbtn" data-view="shortsLab">📱 &nbsp; Shorts Lab</button>
   <button class="navbtn" data-view="projects">▤ &nbsp; My Projects</button>
   <button class="navbtn" data-view="export">▧ &nbsp; Export Center</button>
  </nav>
@@ -70,6 +72,7 @@
    </div>
   </div>
  </section>
+ <section id="shortsLab" class="view hidden"><div id="shortsLabRoot"></div></section>
  <section id="projects" class="view hidden"><div class="panel"><div class="section-head"><div><h2>▤ Your saved projects</h2><p class="sub">Stored locally in this browser, not synced across devices.</p></div><button class="btn primary" id="newProject">+ New project</button></div><div id="projectList" class="projects"></div></div></section>
  <section id="export" class="view hidden"><div class="panel"><h2>▧ Export Center</h2><p class="sub">Download everything needed to continue production.</p><div class="buttonrow"><button class="btn primary" id="exportAgain">↓ Animated WebM preview</button><button class="btn" id="downloadJSON">↓ Project JSON</button><button class="btn" id="downloadTxtAgain">↓ Full script + prompts</button></div><div class="help">WebM export relies on Canvas capture and MediaRecorder, which may vary across browsers. Desktop Chrome is recommended. For Android, install the PWA through Chrome's browser menu. An APK is not bundled.</div></div></section>
  <p class="footer">NovaReel Studio v1.0 · Free & offline-first · Original creative planning, no AI rendering API</p>
@@ -108,7 +111,7 @@ function generate(){
  var theme=compact(state.idea,120);
  for(var i=0;i<state.sceneCount;i++){
   var stage=p.stages[i],action=stage+". Story concept: "+theme+". Featuring "+cast+".";
-  state.scenes.push({heading:["The Hook","Our Mission","The Discovery","The Challenge","The Twist","The Breakthrough","The Reveal","The Finale"][i],action:action,narration:stage+". "+(i===0?"Here's where our story begins: ":"Then, ")+theme, prompt:""});
+  state.scenes.push({heading:["The Hook","Our Mission","The Discovery","The Challenge","The Twist","The Breakthrough","The Reveal","The Finale"][i],action:action,narration:stage+". "+(i===0?"Here's where our story begins: ":"Then, ")+theme, prompt:"",durationSec:(state.format==="short"?3:4)});
  }
  state.scenes.forEach((sc,i)=>sc.prompt=promptFor(sc,i));
  state.script=state.scenes.map((sc,i)=>"Scene "+(i+1)+" — "+sc.heading+"\n"+sc.narration).join("\n\n");
@@ -116,7 +119,7 @@ function generate(){
  state.metadata={title:subject,description:"Join us for an original "+(state.genre==="kids"?"family-friendly animated adventure":state.genre==="satisfying"?"relaxing and colorful creative journey":state.genre==="drama"?"dramatic story with unexpected turns":"funny animal story")+"!\n\n"+state.idea+"\n\nWatch all the way to the satisfying ending.\n\nCreated using original story ideas and visuals. Subscribe for more adventures!\n\n#Shorts #YouTube"+(state.format==="short"?" #CartoonShorts":" #Animation"),hashtags:["#Shorts","#YouTube",...p.tags.map(x=>"#"+x)].join(" ")};
  state.id=null;state.createdAt=null;previewIndex=0;renderAll();toast("Storyboard generated — edit any scene!");
 }
-function updateStats(){$("statScenes").textContent=state.scenes.length+" scenes";$("statDuration").textContent=(state.scenes.length*3)+" sec";$("statProjects").textContent=saved.length+" saved";}
+function updateStats(){$("statScenes").textContent=state.scenes.length+" scenes";$("statDuration").textContent=(Math.round(state.scenes.reduce((sum,s)=>sum+Math.max(.5,Number(s.durationSec)||3),0)*10)/10)+" sec";$("statProjects").textContent=saved.length+" saved";}
 function item(tag,klass,txt){var e=document.createElement(tag);if(klass)e.className=klass;if(txt!==undefined)e.textContent=txt;return e}
 function fieldInput(labelText,textVal,callback,rows,cls){
  var wrap=item("div","field"),lab=item("label","",labelText),input=document.createElement(rows?"textarea":"input");if(rows)input.rows=rows;input.className=cls||"";input.value=textVal;input.addEventListener("input",()=>{callback(input.value);drawPreview();});wrap.append(lab,input);return wrap
@@ -141,7 +144,7 @@ function renderMeta(){
  })
 }
 function syncScript(){state.script=$("fullScript").value}
-function renderAll(){putSettings();renderScenes();$("fullScript").value=state.script;renderMeta();updateStats();drawPreview();renderProjects()}
+function renderAll(){putSettings();renderScenes();$("fullScript").value=state.script;renderMeta();updateStats();drawPreview();renderProjects();if(window.NovaReelLabSync)window.NovaReelLabSync()}
 function showView(key){document.querySelectorAll(".view").forEach(x=>x.classList.toggle("hidden",x.id!==key));document.querySelectorAll(".navbtn").forEach(x=>x.classList.toggle("active",x.dataset.view===key));if(key==="projects")renderProjects();scrollTo({top:0,behavior:"smooth"})}
 function showTab(tab){document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===tab)));document.querySelectorAll(".tabpane").forEach(p=>p.classList.toggle("active",p.id==="pane-"+tab))}
 async function copyText(text){try{if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text)}else{var a=document.createElement("textarea");a.value=text;document.body.append(a);a.select();document.execCommand("copy");a.remove()}toast("Copied to clipboard")}catch(e){toast("Clipboard blocked; select and copy text manually")}}
@@ -162,7 +165,8 @@ function drawFrame(ctx,index,phase,w,h){
  ctx.font="800 "+Math.floor(w*.062)+"px system-ui";ctx.fillStyle="#fff";ctx.fillText(compact(scene.heading,26),center,h*.66);
  ctx.fillStyle="#eff7ff";ctx.font="500 "+Math.floor(w*.033)+"px system-ui";lineWrap(ctx,compact(scene.action,146),center,h*.74,w*.72,h*.042,4);
  ctx.fillStyle="#ffffffac";round(ctx,w*.08,h*.90,w*.84,4,2);ctx.fillStyle="#55f2d2";round(ctx,w*.08,h*.90,w*.84*Math.max(.04,Math.min(1,phase)),4,2);
- ctx.font="700 "+Math.floor(w*.028)+"px system-ui";ctx.fillStyle="#fff";ctx.fillText("SCENE "+(index+1)+" OF "+state.scenes.length,center,h*.95)
+ ctx.font="700 "+Math.floor(w*.028)+"px system-ui";ctx.fillStyle="#fff";ctx.fillText("SCENE "+(index+1)+" OF "+state.scenes.length,center,h*.95);
+ if(window.NovaReelShortsOverlay)window.NovaReelShortsOverlay(ctx,index,phase,w,h);
 }
 function canvasSize(){var wide=state.format==="wide",c=$("canvas");c.width=wide?960:540;c.height=wide?540:960;$("preview").classList.toggle("wide",wide);$("resolution").textContent=wide?"16:9 · 960×540":"9:16 · 540×960";return c}
 function drawPreview(){var c=canvasSize(),ctx=c.getContext("2d");previewIndex=Math.max(0,Math.min(previewIndex,state.scenes.length-1));drawFrame(ctx,previewIndex,.24,c.width,c.height);$("sceneIndicator").textContent="Scene "+(previewIndex+1)+" / "+state.scenes.length;}
@@ -171,14 +175,19 @@ async function exportWebm(){
  var c=canvasSize(),ctx=c.getContext("2d"),mime=["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(t=>MediaRecorder.isTypeSupported(t));
  if(!mime){toast("This browser cannot export WebM. Try Chrome.");return}
  busy=true;var btn=$("exportVideo");btn.disabled=true;$("exportAgain").disabled=true;$("progressWrap").classList.remove("hidden");$("progressFill").style.width="0%";
- var stream=c.captureStream(24),rec,parts=[];try{rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2800000})}catch(e){busy=false;btn.disabled=false;$("exportAgain").disabled=false;toast("Could not start recorder");return}
+ var stream=c.captureStream(24),rec,parts=[],audioCleanup=null;
+ if(window.NovaReelAudioAttach){try{audioCleanup=await window.NovaReelAudioAttach(stream)}catch(e){toast("Audio unavailable; exporting without sound")}}
+ try{rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2800000})}catch(e){busy=false;btn.disabled=false;$("exportAgain").disabled=false;toast("Could not start recorder");return}
  rec.ondataavailable=e=>{if(e.data.size)parts.push(e.data)};
  var done=new Promise((resolve,reject)=>{rec.onstop=resolve;rec.onerror=e=>reject(e.error||new Error("Recording failed"))});
  try{
- rec.start(250);var total=state.scenes.length*3000,started=performance.now();
- await new Promise((resolve)=>{function frame(now){var elapsed=Math.min(now-started,total),idx=Math.min(state.scenes.length-1,Math.floor(elapsed/3000)),phase=(elapsed%3000)/3000;drawFrame(ctx,idx,phase,c.width,c.height);$("progressFill").style.width=(elapsed/total*100).toFixed(0)+"%";$("exportStatus").textContent="Recording storyboard… "+Math.ceil(elapsed/1000)+"/"+Math.ceil(total/1000)+" seconds";if(elapsed<total)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)});
+ rec.start(250);var total=state.scenes.reduce((sum,sc)=>sum+Math.max(.5,Number(sc.durationSec)||3)*1000,0),started=performance.now();
+ if(window.NovaReelAudioBegin)window.NovaReelAudioBegin();
+ await new Promise((resolve)=>{function frame(now){var elapsed=Math.min(now-started,total),remaining=elapsed,idx=0,sceneMs=3000;
+ for(;idx<state.scenes.length-1;idx++){sceneMs=Math.max(.5,Number(state.scenes[idx].durationSec)||3)*1000;if(remaining<sceneMs)break;remaining-=sceneMs}
+ sceneMs=Math.max(.5,Number(state.scenes[idx].durationSec)||3)*1000;var phase=Math.min(.999,remaining/sceneMs);drawFrame(ctx,idx,phase,c.width,c.height);$("progressFill").style.width=(elapsed/total*100).toFixed(0)+"%";$("exportStatus").textContent="Recording storyboard… "+Math.ceil(elapsed/1000)+"/"+Math.ceil(total/1000)+" seconds";if(elapsed<total)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)});
  await new Promise(r=>setTimeout(r,300));rec.stop();await done;download(escapeFile(state.idea)+".webm",new Blob(parts,{type:mime}),mime);$("exportStatus").textContent="WebM preview exported. Remember: silent animated storyboard, not generated 3D footage.";toast("Storyboard video exported!")
- }catch(e){$("exportStatus").textContent="Export failed: "+(e.message||"unknown error");if(rec.state!=="inactive")rec.stop();toast("WebM export failed")}finally{stream.getTracks().forEach(t=>t.stop());busy=false;btn.disabled=false;$("exportAgain").disabled=false;drawPreview();setTimeout(()=>$("progressWrap").classList.add("hidden"),1300)}
+ }catch(e){$("exportStatus").textContent="Export failed: "+(e.message||"unknown error");if(rec.state!=="inactive")rec.stop();toast("WebM export failed")}finally{if(audioCleanup)try{audioCleanup()}catch(e){}stream.getTracks().forEach(t=>t.stop());busy=false;btn.disabled=false;$("exportAgain").disabled=false;drawPreview();setTimeout(()=>$("progressWrap").classList.add("hidden"),1300)}
 }
 saved=safeGet();
 document.querySelectorAll(".navbtn").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
@@ -199,8 +208,10 @@ $("stopSpeech").addEventListener("click",()=>{if("speechSynthesis" in window)spe
 $("format").addEventListener("change",()=>{state.format=$("format").value;drawPreview()});
 $("genre").addEventListener("change",()=>{$("characters").value=preset[$("genre").value].cast});
 if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostname==="localhost"))window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+window.NovaReelAPI={getState:()=>state,refresh:()=>{updateStats();drawPreview()},renderAll:()=>renderAll(),getIndex:()=>previewIndex,setIndex:n=>{previewIndex=Math.max(0,Math.min(state.scenes.length-1,n));drawPreview()},toast:toast,download:download,copy:copyText,drawPreview:drawPreview,getCanvas:()=>$("canvas")};
 generate();
 })();
 </script>
+<script src="./shorts-lab.js" defer></script>
 </body>
 </html>

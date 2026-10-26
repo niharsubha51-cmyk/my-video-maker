@@ -102,22 +102,62 @@ function titleFor(idea,genre){var t=idea.replace(/[.!?]+$/,"").trim();return com
 function promptFor(scene,i){var style=state.style==="3d"?"premium soft 3D animation, rich textures and adorable facial expressions":state.style==="cinematic"?"cinematic photoreal lighting, realistic details and refined depth of field":"hand-painted magical storybook art, gentle warm textures";
  return "SCENE "+(i+1)+": "+scene.action+". Characters remain identical throughout: "+state.characters+". Setting: "+preset[state.genre].type+". Visual quality: "+style+", high-quality 1080p detail, coherent character design, smooth movement, clear subject, professional composition, natural lighting. Camera: "+(["dynamic wide opening shot","medium character-tracking shot","gentle push-in","low-angle action follow","close-up reaction and reveal","smooth cinematic orbit","overhead satisfying reveal","slow pullback closing shot"][i%8])+". "+(state.format==="short"?"Vertical 9:16 safe framing for YouTube Shorts.":"Widescreen 16:9 cinematic framing.")+" No watermark, no logo, no embedded text. Provide action in one continuous shot.";
 }
+function threeActPayoff(premise,genre){
+ var t=premise.toLowerCase();
+ if(/\bfish\b|\bturtle\b|\bocean\b|\bunderwater\b/.test(t))return "The little sea creature gets safely back to its sparkling underwater home, then rewards the friends with a beautiful rainbow of glowing bubbles.";
+ if(/\bcake\b|\bcupcake\b|\bcandy\b|\bcookie\b/.test(t))return "The missing treat is finally found, and the friends share a colorful, funny celebration that resolves the chase.";
+ if(/\bballoon\b/.test(t))return "The lost balloon is safely returned, and the characters celebrate together with a cheerful surprise.";
+ if(/\blocket\b|\bnecklace\b|\bpendant\b/.test(t))return "The mysterious keepsake reveals its true owner, the misunderstanding is resolved, and the family finally knows the truth.";
+ if(/\brainbow\b|\bpaint\b|\bcolor\b/.test(t))return "All the separate colors fit together perfectly to reveal a gorgeous rainbow surprise with a satisfying final transformation.";
+ if(genre==="drama")return "The hidden truth is revealed clearly, the misunderstanding is resolved, and the characters see the real consequences.";
+ if(genre==="satisfying")return "Every detail clicks into place and reveals a perfectly finished, colorful creation.";
+ if(genre==="animals")return "The funny chase ends with the missing prize safely recovered, and the animals share a joyful final surprise.";
+ return "The friends solve the mystery together, help anyone in need, and discover a joyful surprise they can share.";
+}
 function generate(){
  settings();
  if(state.idea.length<8){toast("Describe your story idea in at least 8 characters");$("idea").focus();return}
  var p=preset[state.genre],cast=state.characters||p.cast;
  state.characters=cast;$("characters").value=cast;
+ var lead=cast.split(",")[0].trim()||"the main character";
+ var premise=compact(state.idea.replace(/[.!?]+$/,"").trim(),140);
+ var payoff=threeActPayoff(premise,state.genre);
+ var language={
+  kids:{hook:"An incredible mystery appeared right in front of "+lead+". Nobody knew what it meant. Could the friends solve it?",
+        middle:["The friends noticed a strange clue and decided to find out what it meant.","Their first attempt revealed an unexpected obstacle, but they refused to give up.","A surprising twist made the problem even harder. They needed a clever new idea.","Working together, the friends found the missing clue and prepared one final attempt.","Their kindness and teamwork brought them closer to the answer than ever before.","The mystery was finally ready to be solved."]},
+  animals:{hook:"Something completely unexpected started a wild animal chase. But who was responsible for the mystery?",
+           middle:["The animal friends spotted the first clue and started following it.","An unexpected obstacle turned the pursuit into funny chaos.","Their first plan failed, and the mysterious surprise escaped again.","A clever friend noticed something everyone else had missed.","The friends worked together to stop the chaos safely.","The chase reached its funniest turning point."]},
+  drama:{hook:"A shocking secret was discovered, but nobody could explain what it meant. Who was hiding the truth?",
+         middle:["One character noticed the first clue, which raised new questions.","A confrontation revealed that someone knew more than they admitted.","Another clue created a surprising misunderstanding.","An unexpected witness challenged everyone's assumptions.","The characters followed the evidence instead of making another accusation.","The final truth was about to be revealed."]},
+  satisfying:{hook:"A mysterious little detail appeared in this creation. What beautiful surprise would it reveal at the end?",
+             middle:["The first materials were arranged into a perfectly neat pattern.","Every careful movement revealed another pleasing layer.","A small unexpected change created an exciting new color.","The creator restored the symmetry with one precise motion.","The last tiny detail was placed in exactly the right position.","The reveal was almost complete."]}
+ }[state.genre];
+ var storyActions=[
+  "Show the characters noticing the first clear clue. Establish their goal and the reason it matters.",
+  "Raise the stakes with a visible obstacle. Show a distinct action and the characters' immediate reaction.",
+  "Add a surprising but logical twist. Make the viewer curious about how the problem will be solved.",
+  "Show a clever attempt that uses an earlier clue. Keep the action clear and easy to follow.",
+  "Reveal the key discovery that makes a solution possible. Show the characters working together.",
+  "Build toward the final solution without showing the answer yet."
+ ];
+ var count=Math.max(4,Number(state.sceneCount)||6),hookTime=state.format==="short"?3:5,finalTime=state.format==="short"?8:10,midTime=state.format==="short"?Number(((30-hookTime-finalTime)/(count-2)).toFixed(2)):10;
  state.scenes=[];
- var theme=compact(state.idea,120);
- for(var i=0;i<state.sceneCount;i++){
-  var stage=p.stages[i],action=stage+". Story concept: "+theme+". Featuring "+cast+".";
-  state.scenes.push({heading:["The Hook","Our Mission","The Discovery","The Challenge","The Twist","The Breakthrough","The Reveal","The Finale"][i],action:action,narration:stage+". "+(i===0?"Here's where our story begins: ":"Then, ")+theme, prompt:"",durationSec:(state.format==="short"?3:4)});
+ for(var i=0;i<count;i++){
+  var first=i===0,last=i===count-1,act=first?"hook":last?"payoff":"story";
+  var beat=i-1,headline=first?"1 • Suspense Hook":last?"3 • Reward & Payoff":"2 • Story — "+(["The Clue","The Challenge","The Twist","The Attempt","The Discovery","The Build-Up"][beat]||"The Journey");
+  var action=first?"FIRST SECOND: Show the most mysterious, unusual visual moment in this premise: "+premise+". Use a clear reaction from "+lead+" and a close camera movement. Show what is at stake, but keep the answer hidden until the ending.":
+   last?"REWARD AND PAYOFF: "+payoff+" Show the actual resolution clearly on screen, followed by one satisfying reaction. End the story completely rather than promising an answer in another video.":
+   storyActions[beat%storyActions.length]+" Story context: "+premise+". Characters: "+cast+".";
+  var narration=first?language.hook:last?"At last, the mystery is solved! "+payoff:
+   language.middle[beat%language.middle.length];
+  var time=first?hookTime:last?Number((state.format==="short"?30:5+10*(count-2)+10)-hookTime-midTime*(count-2)).toFixed(2):midTime;
+  state.scenes.push({act:act,heading:headline,action:action,narration:narration,prompt:"",durationSec:Math.max(.5,time)});
  }
  state.scenes.forEach((sc,i)=>sc.prompt=promptFor(sc,i));
- state.script=state.scenes.map((sc,i)=>"Scene "+(i+1)+" — "+sc.heading+"\n"+sc.narration).join("\n\n");
+ state.script=state.scenes.map((sc,i)=>sc.heading+"\n"+sc.narration).join("\n\n");
  var subject=titleFor(state.idea,state.genre);
- state.metadata={title:subject,description:"Join us for an original "+(state.genre==="kids"?"family-friendly animated adventure":state.genre==="satisfying"?"relaxing and colorful creative journey":state.genre==="drama"?"dramatic story with unexpected turns":"funny animal story")+"!\n\n"+state.idea+"\n\nWatch all the way to the satisfying ending.\n\nCreated using original story ideas and visuals. Subscribe for more adventures!\n\n#Shorts #YouTube"+(state.format==="short"?" #CartoonShorts":" #Animation"),hashtags:["#Shorts","#YouTube",...p.tags.map(x=>"#"+x)].join(" ")};
- state.id=null;state.createdAt=null;previewIndex=0;renderAll();toast("Storyboard generated — edit any scene!");
+ state.metadata={title:subject,description:"Join us for an original "+(state.genre==="kids"?"family-friendly animated adventure":state.genre==="satisfying"?"relaxing and colorful creative journey":state.genre==="drama"?"dramatic story with unexpected turns":"funny animal story")+"!\n\n"+state.idea+"\n\nThis story includes a suspenseful opening, a developing adventure, and a satisfying ending.\n\nCreated from original story ideas. Subscribe for more adventures!\n\n#Shorts #YouTube"+(state.format==="short"?" #CartoonShorts":" #Animation"),hashtags:["#Shorts","#YouTube",...p.tags.map(x=>"#"+x)].join(" ")};
+ state.id=null;state.createdAt=null;previewIndex=0;renderAll();toast("3-part story created: suspense hook → story → reward & payoff!");
 }
 function updateStats(){$("statScenes").textContent=state.scenes.length+" scenes";$("statDuration").textContent=(Math.round(state.scenes.reduce((sum,s)=>sum+Math.max(.5,Number(s.durationSec)||3),0)*10)/10)+" sec";$("statProjects").textContent=saved.length+" saved";}
 function item(tag,klass,txt){var e=document.createElement(tag);if(klass)e.className=klass;if(txt!==undefined)e.textContent=txt;return e}

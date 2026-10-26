@@ -40,3 +40,12 @@
 .sl-safe{font-size:12px;color:#9ad7bc;background:#1d473c55;border:1px solid #39705a;border-radius:10px;padding:10px}
 .sl-video{width:100%;aspect-ratio:9/16;max-height:370px;border-radius:10px;object-fit:contain;background:#11182e}
 @media(max-width:1000px){.sl-layout{grid-template-columns:1fr}}@media(max-width:540px){.sl-pane{padding:15px}.sl-grid{grid-template-columns:1fr}.sl-header{align-items:flex-start}.sl-header h1{font-size:23px}.sl-btn{font-size:12px;padding:9px}}
+/* Three-part Shorts story timing visual */
+.sl-three-act{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0 8px}
+.sl-three-act .sl-card{display:flex;flex-direction:column;gap:6px;margin:0;padding:12px;min-height:114px;background:linear-gradient(145deg,#182c50,#121e37)}
+.sl-three-act strong{color:#f2f9ff;font-size:14px;font-variant-numeric:tabular-nums}
+.sl-three-act small{color:#afc0dd;font-size:11px;line-height:1.45}
+.sl-segment.sl-hook{background:linear-gradient(130deg,#8f3d89,#b0526c)}
+.sl-segment.sl-story{background:linear-gradient(130deg,#355b9a,#367e8d)}
+.sl-segment.sl-payoff{background:linear-gradient(130deg,#168e83,#37b68e);color:#09271e}
+@media(max-width:640px){.sl-three-act{grid-template-columns:1fr}.sl-three-act .sl-card{min-height:0}}

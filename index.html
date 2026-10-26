@@ -102,6 +102,21 @@ function titleFor(idea,genre){var t=idea.replace(/[.!?]+$/,"").trim();return com
 function promptFor(scene,i){var style=state.style==="3d"?"premium soft 3D animation, rich textures and adorable facial expressions":state.style==="cinematic"?"cinematic photoreal lighting, realistic details and refined depth of field":"hand-painted magical storybook art, gentle warm textures";
  return "SCENE "+(i+1)+": "+scene.action+". Characters remain identical throughout: "+state.characters+". Setting: "+preset[state.genre].type+". Visual quality: "+style+", high-quality 1080p detail, coherent character design, smooth movement, clear subject, professional composition, natural lighting. Camera: "+(["dynamic wide opening shot","medium character-tracking shot","gentle push-in","low-angle action follow","close-up reaction and reveal","smooth cinematic orbit","overhead satisfying reveal","slow pullback closing shot"][i%8])+". "+(state.format==="short"?"Vertical 9:16 safe framing for YouTube Shorts.":"Widescreen 16:9 cinematic framing.")+" No watermark, no logo, no embedded text. Provide action in one continuous shot.";
 }
+function threeActHook(premise,genre,lead){
+ var t=premise.toLowerCase();
+ if(/\bfish\b|\bturtle\b|\bocean\b|\bunderwater\b/.test(t))return "A glowing sea creature called out to "+lead+". Why?";
+ if(/\bcake\b|\bcupcake\b|\bcandy\b|\bcookie\b/.test(t))return "The special treat suddenly vanished. Who took it?";
+ if(/\bballoon\b/.test(t))return lead+"'s special balloon disappeared. Where did it go?";
+ if(/\blocket\b|\bnecklace\b|\bpendant\b/.test(t))return "One tiny keepsake revealed a secret. Whose was it?";
+ if(/\brainbow\b|\bpaint\b|\bcolor\b/.test(t))return "One color was missing. What would complete the rainbow?";
+ if(genre==="drama")return "Everyone heard a shocking accusation. But was it true?";
+ if(genre==="satisfying")return "One tiny detail was missing. What would the final reveal look like?";
+ if(genre==="animals")return "Something strange started a wild chase. What were they chasing?";
+ return lead+" spotted a mysterious clue. What could it mean?";
+}
+function threeActCaption(text){
+ return String(text||"").replace(/\s+/g," ").trim().slice(0,100);
+}
 function threeActPayoff(premise,genre){
  var t=premise.toLowerCase();
  if(/\bfish\b|\bturtle\b|\bocean\b|\bunderwater\b/.test(t))return "The little sea creature gets safely back to its sparkling underwater home, then rewards the friends with a beautiful rainbow of glowing bubbles.";
@@ -121,7 +136,7 @@ function generate(){
  state.characters=cast;$("characters").value=cast;
  var lead=cast.split(",")[0].trim()||"the main character";
  var premise=compact(state.idea.replace(/[.!?]+$/,"").trim(),140);
- var payoff=threeActPayoff(premise,state.genre);
+ var payoff=threeActPayoff(premise,state.genre),suspense=threeActHook(premise,state.genre,lead);
  var language={
   kids:{hook:"An incredible mystery appeared right in front of "+lead+". Nobody knew what it meant. Could the friends solve it?",
         middle:["The friends noticed a strange clue and decided to find out what it meant.","Their first attempt revealed an unexpected obstacle, but they refused to give up.","A surprising twist made the problem even harder. They needed a clever new idea.","Working together, the friends found the missing clue and prepared one final attempt.","Their kindness and teamwork brought them closer to the answer than ever before.","The mystery was finally ready to be solved."]},
@@ -148,7 +163,7 @@ function generate(){
   var action=first?"FIRST SECOND: Show the most mysterious, unusual visual moment in this premise: "+premise+". Use a clear reaction from "+lead+" and a close camera movement. Show what is at stake, but keep the answer hidden until the ending.":
    last?"REWARD AND PAYOFF: "+payoff+" Show the actual resolution clearly on screen, followed by one satisfying reaction. End the story completely rather than promising an answer in another video.":
    storyActions[beat%storyActions.length]+" Story context: "+premise+". Characters: "+cast+".";
-  var narration=first?language.hook:last?"At last, the mystery is solved! "+payoff:
+  var narration=first?suspense:last?"At last, the mystery is solved! "+payoff:
    language.middle[beat%language.middle.length];
   var time=first?hookTime:last?Number((state.format==="short"?30:5+10*(count-2)+10)-hookTime-midTime*(count-2)).toFixed(2):midTime;
   state.scenes.push({act:act,heading:headline,action:action,narration:narration,prompt:"",durationSec:Math.max(.5,time)});
@@ -157,6 +172,8 @@ function generate(){
  state.script=state.scenes.map((sc,i)=>sc.heading+"\n"+sc.narration).join("\n\n");
  var subject=titleFor(state.idea,state.genre);
  state.metadata={title:subject,description:"Join us for an original "+(state.genre==="kids"?"family-friendly animated adventure":state.genre==="satisfying"?"relaxing and colorful creative journey":state.genre==="drama"?"dramatic story with unexpected turns":"funny animal story")+"!\n\n"+state.idea+"\n\nThis story includes a suspenseful opening, a developing adventure, and a satisfying ending.\n\nCreated from original story ideas. Subscribe for more adventures!\n\n#Shorts #YouTube"+(state.format==="short"?" #CartoonShorts":" #Animation"),hashtags:["#Shorts","#YouTube",...p.tags.map(x=>"#"+x)].join(" ")};
+ state.shorts=Object.assign({},state.shorts||{},{lastIdea:state.idea,hook:suspense,cta:"Mystery solved! A happy ending for everyone. 🌈",
+ captions:state.scenes.map(function(sc,i){return i===0?threeActCaption(suspense):i===state.scenes.length-1?threeActCaption("The mystery is solved! "+payoff):threeActCaption(sc.narration)})});
  state.id=null;state.createdAt=null;previewIndex=0;renderAll();toast("3-part story created: suspense hook → story → reward & payoff!");
 }
 function updateStats(){$("statScenes").textContent=state.scenes.length+" scenes";$("statDuration").textContent=(Math.round(state.scenes.reduce((sum,s)=>sum+Math.max(.5,Number(s.durationSec)||3),0)*10)/10)+" sec";$("statProjects").textContent=saved.length+" saved";}

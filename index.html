@@ -172,22 +172,22 @@ function canvasSize(){var wide=state.format==="wide",c=$("canvas");c.width=wide?
 function drawPreview(){var c=canvasSize(),ctx=c.getContext("2d");previewIndex=Math.max(0,Math.min(previewIndex,state.scenes.length-1));drawFrame(ctx,previewIndex,.24,c.width,c.height);$("sceneIndicator").textContent="Scene "+(previewIndex+1)+" / "+state.scenes.length;}
 async function exportWebm(){
  if(busy)return;if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){toast("WebM recording is not supported here. Try Chrome.");return}
- var c=canvasSize(),ctx=c.getContext("2d"),mime=["video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(t=>MediaRecorder.isTypeSupported(t));
+ var c=canvasSize(),ctx=c.getContext("2d"),mime=["video/webm;codecs=vp9,opus","video/webm;codecs=vp8,opus","video/webm;codecs=vp9","video/webm;codecs=vp8","video/webm"].find(t=>MediaRecorder.isTypeSupported(t));
  if(!mime){toast("This browser cannot export WebM. Try Chrome.");return}
  busy=true;var btn=$("exportVideo");btn.disabled=true;$("exportAgain").disabled=true;$("progressWrap").classList.remove("hidden");$("progressFill").style.width="0%";
  var stream=c.captureStream(24),rec,parts=[],audioCleanup=null;
  if(window.NovaReelAudioAttach){try{audioCleanup=await window.NovaReelAudioAttach(stream)}catch(e){toast("Audio unavailable; exporting without sound")}}
- try{rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2800000})}catch(e){busy=false;btn.disabled=false;$("exportAgain").disabled=false;toast("Could not start recorder");return}
+ try{rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:2800000})}catch(e){if(audioCleanup)try{audioCleanup()}catch(err){}stream.getTracks().forEach(t=>t.stop());busy=false;btn.disabled=false;$("exportAgain").disabled=false;toast("Could not start recorder");return}
  rec.ondataavailable=e=>{if(e.data.size)parts.push(e.data)};
  var done=new Promise((resolve,reject)=>{rec.onstop=resolve;rec.onerror=e=>reject(e.error||new Error("Recording failed"))});
  try{
- rec.start(250);var total=state.scenes.reduce((sum,sc)=>sum+Math.max(.5,Number(sc.durationSec)||3)*1000,0),started=performance.now();
+ if(window.NovaReelRenderStart)window.NovaReelRenderStart();rec.start(250);var total=state.scenes.reduce((sum,sc)=>sum+Math.max(.5,Number(sc.durationSec)||3)*1000,0),started=performance.now();
  if(window.NovaReelAudioBegin)window.NovaReelAudioBegin();
  await new Promise((resolve)=>{function frame(now){var elapsed=Math.min(now-started,total),remaining=elapsed,idx=0,sceneMs=3000;
  for(;idx<state.scenes.length-1;idx++){sceneMs=Math.max(.5,Number(state.scenes[idx].durationSec)||3)*1000;if(remaining<sceneMs)break;remaining-=sceneMs}
  sceneMs=Math.max(.5,Number(state.scenes[idx].durationSec)||3)*1000;var phase=Math.min(.999,remaining/sceneMs);drawFrame(ctx,idx,phase,c.width,c.height);$("progressFill").style.width=(elapsed/total*100).toFixed(0)+"%";$("exportStatus").textContent="Recording storyboard… "+Math.ceil(elapsed/1000)+"/"+Math.ceil(total/1000)+" seconds";if(elapsed<total)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)});
  await new Promise(r=>setTimeout(r,300));rec.stop();await done;download(escapeFile(state.idea)+".webm",new Blob(parts,{type:mime}),mime);$("exportStatus").textContent="WebM preview exported. Remember: silent animated storyboard, not generated 3D footage.";toast("Storyboard video exported!")
- }catch(e){$("exportStatus").textContent="Export failed: "+(e.message||"unknown error");if(rec.state!=="inactive")rec.stop();toast("WebM export failed")}finally{if(audioCleanup)try{audioCleanup()}catch(e){}stream.getTracks().forEach(t=>t.stop());busy=false;btn.disabled=false;$("exportAgain").disabled=false;drawPreview();setTimeout(()=>$("progressWrap").classList.add("hidden"),1300)}
+ }catch(e){$("exportStatus").textContent="Export failed: "+(e.message||"unknown error");if(rec.state!=="inactive")rec.stop();toast("WebM export failed")}finally{if(window.NovaReelRenderStop)window.NovaReelRenderStop();if(audioCleanup)try{audioCleanup()}catch(e){}stream.getTracks().forEach(t=>t.stop());busy=false;btn.disabled=false;$("exportAgain").disabled=false;drawPreview();setTimeout(()=>$("progressWrap").classList.add("hidden"),1300)}
 }
 saved=safeGet();
 document.querySelectorAll(".navbtn").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));

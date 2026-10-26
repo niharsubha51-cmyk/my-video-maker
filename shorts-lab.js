@@ -58,8 +58,12 @@ function hook(){
  else bank=[first.narration||"A mysterious clue appeared. What did it mean?","A magical surprise appeared. Could the friends solve its mystery?"];
  var next=bank[Math.floor(Math.random()*bank.length)];
  o.hook=next;o.captions[0]=next;
- if(first.act==="hook"||shots().length>0){first.act="hook";first.heading="1 • Suspense Hook";first.narration=next}
+ if(first.act==="hook"||shots().length>0){first.act="hook";first.heading="1 • Suspense Hook";first.narration=next;syncScenePrompt(first,"HOOK","Open with this suspenseful line and a surprising visual, but do not show the solution: "+next)}
  syncThreeActScript();
+}
+function syncScenePrompt(sc,marker,note){
+ var key="\nDIRECTOR NOTE ["+marker+"]: ";
+ sc.prompt=String(sc.prompt||"").replace(new RegExp("\\nDIRECTOR NOTE \\["+marker+"\\]: [^\\n]*","g"),"")+key+note;
 }
 function syncThreeActScript(){
  var s=state();s.script=shots().map(function(sc){return sc.heading+"\n"+sc.narration}).join("\n\n")
@@ -74,6 +78,7 @@ function improve(){
  var last=arr[arr.length-1],reward=payoffFor();
  last.narration="The mystery is solved! "+reward;
  last.action="REWARD AND PAYOFF: "+reward+" Show the reveal clearly and give viewers a complete satisfying ending. Do not withhold the answer.";
+ syncScenePrompt(last,"PAYOFF","Show the answer and the final reward clearly on-screen: "+reward+" No cliffhanger.");
  o.captions=arr.map(function(sc,i){return i===0?o.hook:i===arr.length-1?shortCaption(reward,110):shortCaption(sc.narration,105)});
  o.cta=shortCaption(reward,55);
  duration(o.target);
@@ -174,7 +179,7 @@ root.addEventListener("input",function(e){
  var el=e.target,o=config(),s=state();
  if(el.dataset.caption!==undefined){o.captions[Number(el.dataset.caption)]=el.value;api.refresh();return}
  if(el.dataset.seconds!==undefined){var i=Number(el.dataset.seconds),v=Number(el.value);if(Number.isFinite(v)&&v>=.5&&v<=60){s.scenes[i].durationSec=v;api.refresh()}return}
- if(el.dataset.opt){o[el.dataset.opt]=el.value;api.refresh();return}
+ if(el.dataset.opt){o[el.dataset.opt]=el.value;if(el.dataset.opt==="hook"&&shots().length){shots()[0].narration=el.value;syncThreeActScript();syncScenePrompt(shots()[0],"HOOK","Open with this suspenseful line and save the reveal for the payoff: "+el.value)}api.refresh();return}
  if(el.dataset.check){o[el.dataset.check]=el.checked;api.refresh();return}
  if(el.id==="slVolume"){o.audioVolume=Number(el.value)/100;$id("slVolLabel").textContent="Audio volume: "+el.value+"%"}
 });

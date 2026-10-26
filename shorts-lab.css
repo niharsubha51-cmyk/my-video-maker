@@ -1,0 +1,42 @@
+/* NovaReel Shorts Lab — independent, mobile-first extension */
+.sl-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);gap:18px;align-items:start}
+.sl-pane{background:linear-gradient(160deg,#192541,#11192f);border:1px solid #344567;border-radius:18px;padding:20px;min-width:0}
+.sl-pane h2{margin:0 0 3px;font-size:20px}.sl-pane h3{font-size:15px;margin:18px 0 10px}
+.sl-help{color:#a9badb;font-size:12px;line-height:1.6;margin:7px 0 12px}
+.sl-header{margin-bottom:19px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sl-header h1{font-size:27px;letter-spacing:-.05em;margin:4px 0}
+.sl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.sl-field{display:flex;flex-direction:column;gap:6px;min-width:0;margin-bottom:13px}
+.sl-field>label{font-weight:750;font-size:12px;color:#c4cfec}
+.sl-field input,.sl-field select,.sl-field textarea{width:100%;min-width:0;padding:11px;background:#0b1530;border:1px solid #445172;color:#f8faff;border-radius:10px;font:inherit}
+.sl-field textarea{min-height:70px;resize:vertical}
+.sl-field input:focus,.sl-field select:focus,.sl-field textarea:focus{outline:2px solid #53e4c1;outline-offset:1px}
+.sl-btns{display:flex;gap:7px;flex-wrap:wrap}
+.sl-btn{background:#263758;color:#f4f8ff;border:1px solid #3c5278;padding:9px 12px;border-radius:11px;font-size:13px;font-weight:800;cursor:pointer}
+.sl-btn:hover{background:#364977}.sl-btn[aria-pressed=true]{background:#3b6c64;border-color:#65d9c1;color:#d9fff3}
+.sl-btn.sl-primary{background:linear-gradient(110deg,#4fe4c0,#8cb8ff);border-color:transparent;color:#101b34}
+.sl-btn:focus-visible{outline:3px solid #83ffd3}
+.sl-card{border:1px solid #374664;background:#0f1930;border-radius:13px;padding:14px;margin:11px 0}
+.sl-card-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.sl-card-top strong{font-size:13px}.sl-id{font-size:11px;color:#64e6c9;font-weight:900;letter-spacing:.1em}
+.sl-timeline{display:flex;gap:3px;height:33px;overflow:hidden;border-radius:8px;margin:10px 0}
+.sl-segment{position:relative;display:flex;align-items:center;justify-content:center;color:#e4f5ff;font-size:11px;font-weight:800;min-width:13px;background:linear-gradient(130deg,#684ba9,#2f7e8c);border-right:2px solid #151e39}
+.sl-segment:nth-child(even){background:linear-gradient(130deg,#28668c,#356980)}
+.sl-check{display:flex;align-items:flex-start;gap:8px;color:#cad6e8;font-size:13px;margin:12px 0;line-height:1.45}
+.sl-check input{accent-color:#56e5bd;margin-top:3px}
+.sl-grade{font-size:38px;font-weight:900;letter-spacing:-.06em;color:#53e4c1}
+.sl-grade-row{display:flex;align-items:center;gap:15px}
+.sl-score-msg{font-size:13px;color:#aec1dd}
+.sl-list{margin:12px 0;padding-left:18px;color:#bdc8dd;font-size:13px}
+.sl-list li{padding:4px 0}.sl-list .pass{color:#72e7bf}.sl-list .issue{color:#ffd18e}
+.sl-badge{display:inline-block;padding:4px 8px;border-radius:10px;border:1px solid #4d6679;color:#d4ecf2;font-weight:800;font-size:11px}
+.sl-audio-info{color:#b1c2dd;font-size:12px}
+.sl-media-preview{max-height:90px;max-width:110px;border-radius:8px;object-fit:cover}
+.sl-asset-row{display:flex;gap:10px;align-items:center}
+.sl-footer{font-size:12px;color:#99aac9;line-height:1.6;margin-top:18px}
+.sl-muted{color:#a5b6d6}
+.sl-divider{border:0;border-top:1px solid #3a4569;margin:20px 0}
+.sl-inline{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.sl-safe{font-size:12px;color:#9ad7bc;background:#1d473c55;border:1px solid #39705a;border-radius:10px;padding:10px}
+.sl-video{width:100%;aspect-ratio:9/16;max-height:370px;border-radius:10px;object-fit:contain;background:#11182e}
+@media(max-width:1000px){.sl-layout{grid-template-columns:1fr}}@media(max-width:540px){.sl-pane{padding:15px}.sl-grid{grid-template-columns:1fr}.sl-header{align-items:flex-start}.sl-header h1{font-size:23px}.sl-btn{font-size:12px;padding:9px}}
